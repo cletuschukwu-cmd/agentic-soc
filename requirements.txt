@@ -1,0 +1,14 @@
+# Upper bounds are deliberate. This project must build identically in Azure
+# commercial and Azure Government, months apart. Unpinned majors mean the code
+# that passed evaluation is not the code that ships.
+#
+# The API surfaces below are what config.py, envelope.py and agent.py target:
+#   azure-monitor-query 1.x  -> LogsQueryClient(credential, endpoint=...)
+#   openai 1.x               -> AzureOpenAI(azure_ad_token_provider=...)
+#
+# Before moving to azure-monitor-query 2.x or openai 3.x, read their migration
+# guides and re-run the backtest. Do not upgrade mid-sprint.
+
+azure-identity>=1.19.0,<2
+azure-monitor-query>=1.4.0,<2
+openai>=1.55.0,<2

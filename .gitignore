@@ -1,0 +1,29 @@
+# Customer profiles — contain workspace GUIDs, subscription IDs, resource groups
+customers/
+!customers/example.json
+
+# Evaluation data and ground-truth labels
+eval/
+labels.jsonl
+*_eval.json
+results.json
+entity_eval.json
+
+# Secrets and local env
+.env
+*.key
+local.settings.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+tier2lab.json

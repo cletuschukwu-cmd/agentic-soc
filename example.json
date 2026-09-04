@@ -1,0 +1,15 @@
+{
+  "name": "example-customer",
+  "cloud": "commercial",
+
+  "workspace_id": "00000000-0000-0000-0000-000000000000",
+  "aoai_endpoint": "https://their-openai-resource.openai.azure.com/",
+  "model_deployment": "gpt-5.6-sol",
+
+  "subscription_id": "00000000-0000-0000-0000-000000000000",
+  "resource_group": "their-sentinel-rg",
+  "workspace_name": "TheirSentinelWorkspace",
+
+  "incident_label": "ai-triaged",
+  "poll_minutes": 15
+}
