@@ -1,109 +1,136 @@
 """Backend API for the analyst investigation console.
 
-One streaming endpoint. The analyst's natural-language message comes in; the
-agent's reasoning and final verdict stream back as Server-Sent Events so the
-frontend can show the investigation happening live rather than a blank wait.
+Security-first, government-cloud enterprise design. Every request must carry a
+valid identity (auth.py). Reject-by-default: no valid principal -> 401. The
+user's role must permit the action -> else 403. Only then does the work run,
+routed through the orchestrator to the right specialist, using the backend's
+own identity to query — never the user's.
 
-The system prompt lives here, server-side. The analyst never sees or sets it.
+Two identities, cleanly separated:
+  * USER identity (bearer token, validated by auth.py) governs WHO may ask and
+    WHAT they may do.
+  * BACKEND identity (managed identity / az login, inside the agents) does the
+    actual querying.
 
-Auth for the demo is a single shared key in the AISOC_API_KEY environment
-variable (or the active customer profile's `extra.api_key`). Real per-analyst
-Entra login is a later addition; this keeps the surface simple for now.
+The system prompt lives server-side; the analyst never sees or sets it.
 
 Run locally:
     pip install "fastapi>=0.110,<1" "uvicorn[standard]>=0.29,<1"
-    $env:AISOC_CUSTOMER = "tier2lab"
-    $env:AISOC_API_KEY  = "dev-key"
-    uvicorn api:app --reload --port 8080
+    $env:AISOC_CUSTOMER  = "tier2lab"
+    $env:AISOC_AUTH_MODE = "dev"
+    $env:AISOC_DEV_KEY   = "dev-key"
+    uvicorn api:app --port 8080
 """
 
 import json
-import os
-import re
+import logging
 
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
-import config
-from agent import investigate_stream
+import auth
 from customer import customer
-from envelope import build_envelope, run_kql
+from orchestrator import investigate as orchestrate, registry
+
+logging.basicConfig(level=logging.INFO)
+log = logging.getLogger("aisoc.api")
 
 app = FastAPI(title="AISOC Investigation Console")
 
-# The frontend is served from the same origin in production; for local dev the
-# static file may be opened separately, so allow localhost.
+# CORS: the console is same-origin in production. For local dev the page may be
+# opened from a file, so localhost origins are permitted. Not "*", because these
+# requests carry auth headers.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
+    allow_origins=["http://localhost:8080", "http://127.0.0.1:8080", "null"],
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
 
-_INCIDENT_RE = re.compile(r"\bincident\s+#?(\d{1,7})\b", re.IGNORECASE)
+
+def _bearer(authorization: str | None) -> str | None:
+    if not authorization:
+        return None
+    parts = authorization.split(" ", 1)
+    if len(parts) == 2 and parts[0].lower() == "bearer":
+        return parts[1]
+    return authorization  # tolerate a raw token for dev convenience
 
 
-def _api_key() -> str:
-    return os.environ.get("AISOC_API_KEY") or customer().extra.get("api_key", "")
+def _principal(authorization: str | None) -> auth.Principal:
+    """Resolve the caller or raise auth.AuthError."""
+    return auth.authenticate(_bearer(authorization))
 
 
-def _authorize(provided: str | None) -> None:
-    expected = _api_key()
-    if not expected:
-        return  # no key configured -> open, for local dev only
-    if provided != expected:
-        raise HTTPException(status_code=401, detail="invalid or missing API key")
+# --- error handling: auth failures become clean 401/403 --------------------
 
+@app.exception_handler(auth.AuthError)
+async def _auth_err(_req: Request, exc: auth.AuthError):
+    return JSONResponse(status_code=401, content={"error": "unauthorized", "detail": str(exc)})
+
+
+@app.exception_handler(auth.ForbiddenError)
+async def _forbidden(_req: Request, exc: auth.ForbiddenError):
+    return JSONResponse(status_code=403, content={"error": "forbidden", "detail": str(exc)})
+
+
+# --- models -----------------------------------------------------------------
 
 class Query(BaseModel):
     message: str
-    incident_number: int | None = None
 
+
+# --- endpoints --------------------------------------------------------------
 
 @app.get("/api/health")
 def health():
-    checks = {"customer": customer().name, "cloud": customer().cloud,
-              "model": customer().model_deployment}
-    try:
-        run_kql("SecurityIncident | take 1", days=1)
-        checks["log_analytics"] = "ok"
-    except Exception as exc:  # noqa: BLE001
-        checks["log_analytics"] = f"failed: {str(exc)[:120]}"
-    return checks
+    """Unauthenticated liveness only. Reveals no data — just that the service is
+    up and which customer/model it is bound to."""
+    return {"status": "up", "customer": customer().name,
+            "cloud": customer().cloud, "auth_mode": auth.AUTH_MODE}
 
 
-@app.get("/api/customer")
-def whoami():
-    c = customer()
-    return {"name": c.name, "cloud": c.cloud, "model": c.model_deployment}
+@app.get("/api/me")
+def me(authorization: str | None = Header(default=None)):
+    """Who am I, and what may I do. The frontend uses this to render the user
+    and gate UI. Requires a valid identity."""
+    p = _principal(authorization)
+    return {"user": p.audit_dict(),
+            "capabilities": [c.value for c in auth.Capability if p.can(c)]}
+
+
+@app.get("/api/specialists")
+def specialists(authorization: str | None = Header(default=None)):
+    p = _principal(authorization)
+    auth.require(p, auth.Capability.VIEW_RESULTS)
+    return {"specialists": [a.card() for a in registry().values()]}
 
 
 @app.post("/api/investigate")
-def investigate(q: Query, x_api_key: str | None = Header(default=None)):
-    """Stream an investigation as Server-Sent Events."""
-    _authorize(x_api_key)
+def investigate(q: Query, authorization: str | None = Header(default=None)):
+    """Run an investigation. Requires a valid identity AND the run capability.
 
-    # If the analyst names an incident, seed the agent with its envelope.
-    envelope = None
-    incident_no = q.incident_number
-    if incident_no is None:
-        m = _INCIDENT_RE.search(q.message)
-        if m:
-            incident_no = int(m.group(1))
-    if incident_no is not None:
-        try:
-            envelope = build_envelope(incident_no)
-        except Exception:  # noqa: BLE001
-            envelope = None  # fall back to open investigation
+    Streams the orchestrator's result. (Streaming of intermediate reasoning is
+    added when the orchestrator exposes a streaming path; today the specialist
+    runs and the result streams as a single terminal event, plus a start event
+    so the UI can show progress.)
+    """
+    p = _principal(authorization)
+    auth.require(p, auth.Capability.RUN_INVESTIGATION)
+
+    log.info("investigation requested", extra={"user": p.subject})
 
     def event_stream():
-        yield _sse({"type": "start", "incident": incident_no})
+        yield _sse({"type": "start", "user": p.display_name})
         try:
-            for event in investigate_stream(q.message, envelope=envelope):
-                yield _sse(event)
+            result = orchestrate(q.message)
+            # Attach the authenticated principal to the result for audit.
+            result["requested_by"] = p.audit_dict()
+            yield _sse({"type": "result", "data": result})
         except Exception as exc:  # noqa: BLE001
+            log.exception("investigation failed")
             yield _sse({"type": "error", "reason": str(exc)[:300]})
         yield _sse({"type": "done"})
 
