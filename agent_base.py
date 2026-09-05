@@ -125,8 +125,18 @@ class Specialist:
     # orchestrator, which only routes, can run a cheaper one. Change freely.
     model: str | None = None
 
+    # Output contract. Default: the structured verdict every investigative
+    # specialist produces. A specialist whose output is not a verdict (e.g. a
+    # report) overrides this and sets verdict_output = False so the base does
+    # not run citation grounding against a non-verdict shape.
+    response_format: dict | None = None   # None -> contracts.RESPONSE_FORMAT
+    verdict_output: bool = True
+
     def _model(self) -> str:
         return self.model or config.MODEL_DEPLOYMENT
+
+    def _response_format(self) -> dict:
+        return self.response_format or contracts.RESPONSE_FORMAT
 
     # -- scoping enforcement --------------------------------------------------
 
@@ -256,12 +266,14 @@ class Specialist:
                     })
 
             messages.append(
-                {"role": "user", "content": "Now return the verdict object and nothing else."}
+                {"role": "user", "content": ("Now return the report object and nothing else."
+                                             if not self.verdict_output else
+                                             "Now return the verdict object and nothing else.")}
             )
             final = _model_client().chat.completions.create(
                 model=self._model(),
                 messages=messages,
-                response_format=contracts.RESPONSE_FORMAT,
+                response_format=self._response_format(),
             )
             verdict = json.loads(final.choices[0].message.content)
         except Exception as exc:  # noqa: BLE001
@@ -270,7 +282,7 @@ class Specialist:
                                injection_findings=injection_findings, model=self._model(),
                                latency_seconds=time.monotonic() - started)
 
-        grounding = contracts.verify_citations(verdict, run_kql)
+        grounding = contracts.verify_citations(verdict, run_kql) if self.verdict_output else None
         return AgentResult(
             "ok", self.name, verdict=verdict, grounding=grounding,
             sources_touched=touched, tool_calls=trace,
