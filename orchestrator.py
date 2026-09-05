@@ -25,6 +25,7 @@ It routes and composes; it never takes a state-changing action.
 from __future__ import annotations
 
 import json
+import os
 import time
 from typing import Any
 
@@ -32,9 +33,14 @@ from openai import AzureOpenAI
 from azure.identity import get_bearer_token_provider
 
 import config
+import config
 from agent_base import Specialist
 from entity_specialist import EntitySpecialist
 from triage_specialist import TriageSpecialist
+
+# The router only classifies intent — a light task. Run it on a cheaper model.
+# Specialists do the heavy reasoning and keep the smarter model. Change freely.
+ROUTER_MODEL = os.environ.get("AISOC_ROUTER_MODEL", "gpt-4.1-mini")
 
 
 # --- Registry of specialists ------------------------------------------------
@@ -99,7 +105,7 @@ def _route(message: str) -> dict[str, Any]:
                         for c in cards],
     }
     resp = _model_client().chat.completions.create(
-        model=config.MODEL_DEPLOYMENT,
+        model=ROUTER_MODEL,
         messages=[
             {"role": "system", "content": _ROUTER_SYSTEM},
             {"role": "user", "content": json.dumps(routing_input)},

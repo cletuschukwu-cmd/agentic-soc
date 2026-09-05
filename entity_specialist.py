@@ -16,6 +16,8 @@ import entity_tools as et
 
 class EntitySpecialist(Specialist):
     name = "entity_investigator"
+    # Heavy reasoning — keep the smarter model. Override via this line only.
+    model = "gpt-5.6-sol"
     description = (
         "Investigates a single indicator — an IP address, file hash, user "
         "account, or host — across network, endpoint, identity and threat-intel "

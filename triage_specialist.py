@@ -44,6 +44,8 @@ INCIDENT_SCHEMA = {
 
 class TriageSpecialist(Specialist):
     name = "incident_triage"
+    # Heavy reasoning — keep the smarter model. Override via this line only.
+    model = "gpt-5.6-sol"
     description = (
         "Triages a Sentinel or Defender incident by its number: assembles the "
         "incident's alerts and entities, enriches with device, identity and raw "

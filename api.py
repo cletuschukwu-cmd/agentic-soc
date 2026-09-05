@@ -27,7 +27,7 @@ import logging
 
 from fastapi import FastAPI, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse, FileResponse
 from pydantic import BaseModel
 
 import auth
@@ -139,3 +139,14 @@ def investigate(q: Query, authorization: str | None = Header(default=None)):
 
 def _sse(obj: dict) -> str:
     return f"data: {json.dumps(obj, default=str)}\n\n"
+
+
+# --- serve the console (same origin as the API, so no CORS) -----------------
+
+@app.get("/")
+def console():
+    """Serve the investigation console. Same origin as the API endpoints, which
+    is also how it is served in production behind the container."""
+    import os
+    here = os.path.dirname(os.path.abspath(__file__))
+    return FileResponse(os.path.join(here, "console.html"))

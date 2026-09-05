@@ -85,6 +85,7 @@ class AgentResult:
     injection_findings: list[dict] = field(default_factory=list)
     latency_seconds: float = 0.0
     reason: str = ""
+    model: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -97,7 +98,7 @@ class AgentResult:
             "injection_findings": self.injection_findings,
             "latency_seconds": round(self.latency_seconds, 2),
             "reason": self.reason,
-            "model_deployment": config.MODEL_DEPLOYMENT,
+            "model_deployment": self.model or config.MODEL_DEPLOYMENT,
         }
 
 
@@ -119,6 +120,13 @@ class Specialist:
     system_prompt: str = ""
     tools: list[Tool] = []
     max_rounds: int = 6
+    # Per-agent model. None -> fall back to the global default (config.MODEL_DEPLOYMENT).
+    # Specialists do the heavy reasoning, so they get the smarter model; the
+    # orchestrator, which only routes, can run a cheaper one. Change freely.
+    model: str | None = None
+
+    def _model(self) -> str:
+        return self.model or config.MODEL_DEPLOYMENT
 
     # -- scoping enforcement --------------------------------------------------
 
@@ -198,7 +206,7 @@ class Specialist:
                     break
 
                 resp = _model_client().chat.completions.create(
-                    model=config.MODEL_DEPLOYMENT,
+                    model=self._model(),
                     messages=messages,
                     tools=schemas or None,
                     tool_choice="auto" if schemas else "none",
@@ -251,7 +259,7 @@ class Specialist:
                 {"role": "user", "content": "Now return the verdict object and nothing else."}
             )
             final = _model_client().chat.completions.create(
-                model=config.MODEL_DEPLOYMENT,
+                model=self._model(),
                 messages=messages,
                 response_format=contracts.RESPONSE_FORMAT,
             )
@@ -259,14 +267,14 @@ class Specialist:
         except Exception as exc:  # noqa: BLE001
             return AgentResult("unavailable", self.name, reason=str(exc)[:300],
                                sources_touched=touched, tool_calls=trace,
-                               injection_findings=injection_findings,
+                               injection_findings=injection_findings, model=self._model(),
                                latency_seconds=time.monotonic() - started)
 
         grounding = contracts.verify_citations(verdict, run_kql)
         return AgentResult(
             "ok", self.name, verdict=verdict, grounding=grounding,
             sources_touched=touched, tool_calls=trace,
-            injection_findings=injection_findings,
+            injection_findings=injection_findings, model=self._model(),
             latency_seconds=time.monotonic() - started,
         )
 
