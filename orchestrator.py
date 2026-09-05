@@ -37,6 +37,7 @@ import config
 from agent_base import Specialist
 from entity_specialist import EntitySpecialist
 from triage_specialist import TriageSpecialist
+from identity_specialist import IdentitySpecialist
 
 # The router only classifies intent — a light task. Run it on a cheaper model.
 # Specialists do the heavy reasoning and keep the smarter model. Change freely.
@@ -63,6 +64,7 @@ def registry() -> dict[str, Specialist]:
 # else changes when it does.
 register(EntitySpecialist())
 register(TriageSpecialist())
+register(IdentitySpecialist())
 
 
 # --- Model client (router only) --------------------------------------------
