@@ -356,6 +356,43 @@ function renderResult(turn, data) {
     setLive(turn, routed + `<div class="errbox">${esc(reason)}</div>`, true);
     return;
   }
+  // A report has sections/summary but no verdict disposition. Render it as a report.
+  const v = data.verdict;
+  if (v.sections || (v.summary && !v.verdict)) {
+    renderReport(turn, data);
+    return;
+  }
+  renderVerdict(turn, data);
+}
+
+function renderReport(turn, data) {
+  const r = data.verdict;
+  const routeName = data.routing ? data.routing.agent : data.agent;
+  const sections = (r.sections || []).map(s =>
+    `<div class="block"><h4>${esc(s.heading)}</h4><div class="reasoning" style="padding:0;border:0">${esc(s.content)}</div></div>`
+  ).join("");
+  const recs = (r.recommendations || []).map(x => `<li>${esc(x)}</li>`).join("");
+  const html = `
+    ${data.routing ? `<div class="routing">Handled by <span class="agent">${esc(routeName)}</span> · ${esc(data.routing.reason||"")}</div>` : ""}
+    <div class="verdict">
+      <div class="verdict-head" style="border-color:var(--accent);background:var(--accent-dim)">
+        <div class="verdict-label">${esc(r.title || "Report")}</div>
+        <div class="verdict-meta"><span>${esc(r.period || "")}</span></div>
+      </div>
+      ${r.summary ? `<div class="reasoning">${esc(r.summary)}</div>` : ""}
+      ${sections}
+      ${recs ? `<div class="block"><h4>Recommendations</h4><ul class="factors">${recs}</ul></div>` : ""}
+      <div class="footer-meta">
+        <span>Sources <b>${(data.sources_touched||[]).length}</b></span>
+        <span>${(data.latency_seconds||0)}s</span>
+        <span>${esc(data.model_deployment||"")}</span>
+      </div>
+    </div>`;
+  setLive(turn, html, true);
+  turn.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function renderVerdict(turn, data) {
   const v = data.verdict, g = data.grounding || {};
   const cls = VCLASS[v.verdict] || "";
   const routeName = data.routing ? data.routing.agent : data.agent;
