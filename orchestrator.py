@@ -38,10 +38,12 @@ from agent_base import Specialist
 from entity_specialist import EntitySpecialist
 from triage_specialist import TriageSpecialist
 from identity_specialist import IdentitySpecialist
+from threatintel_specialist import ThreatIntelSpecialist
+from correlation_specialist import CorrelationSpecialist
 
 # The router only classifies intent — a light task. Run it on a cheaper model.
 # Specialists do the heavy reasoning and keep the smarter model. Change freely.
-ROUTER_MODEL = os.environ.get("AISOC_ROUTER_MODEL", "gpt-4.1-mini")
+ROUTER_MODEL = os.environ.get("AISOC_ROUTER_MODEL", "gpt-5.6-sol")
 
 
 # --- Registry of specialists ------------------------------------------------
@@ -65,6 +67,8 @@ def registry() -> dict[str, Specialist]:
 register(EntitySpecialist())
 register(TriageSpecialist())
 register(IdentitySpecialist())
+register(ThreatIntelSpecialist())
+register(CorrelationSpecialist())
 
 
 # --- Model client (router only) --------------------------------------------
