@@ -145,6 +145,24 @@ def _exec_kql(source: Source, query_fragment: str, days: int) -> dict[str, Any]:
                 "reason": str(exc)[:200], "rows": []}
 
 
+def _exec_rest_api(source: Source, query_fragment: str, days: int) -> dict[str, Any]:
+    """Execute against an external HTTP API source. The source's target names
+    which API client to use ('defender' today; 'google_ti', 'virustotal' later).
+    query_fragment is the indicator/value to look up. Each API client keeps its
+    own auth (secret from Key Vault) and normalises results to the registry
+    shape, so the agent never knows the transport."""
+    target = (source.target or "").lower()
+    try:
+        if target == "defender":
+            from defender_api import match_indicator
+            return match_indicator(query_fragment)
+        return {"available": False, "kind": "rest_api", "source": source.logical,
+                "reason": f"no rest_api client registered for target '{target}'", "rows": []}
+    except Exception as exc:  # noqa: BLE001
+        return {"available": False, "kind": "rest_api", "source": source.logical,
+                "reason": str(exc)[:200], "rows": []}
+
+
 def _not_yet(kind: str) -> Callable:
     def handler(source: Source, *_args, **_kwargs) -> dict[str, Any]:
         return {"available": False, "kind": kind, "source": source.logical,
@@ -156,7 +174,7 @@ def _not_yet(kind: str) -> Callable:
 _HANDLERS: dict[str, Callable] = {
     "kql": _exec_kql,
     "storage": _not_yet("storage"),
-    "rest_api": _not_yet("rest_api"),
+    "rest_api": _exec_rest_api,
     "file": _not_yet("file"),
 }
 
