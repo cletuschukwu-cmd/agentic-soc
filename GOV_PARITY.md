@@ -78,3 +78,20 @@ When adopting any new Azure capability during the cloud build:
 2. Set status — verify in the Gov tenant where possible, don't trust docs alone.
 3. If Commercial-only, find an equivalent or log it as a gap above.
 4. Update on every new dependency. This file is the Gov-readiness checklist.
+
+## Sentinel MCP server — evaluate next session
+
+Microsoft Sentinel MCP server (public preview) — managed MCP tools over the
+Sentinel data lake (table search, entity analysis, incident triage, threat
+hunting). Integrates natively with Foundry, Copilot Studio, VS Code.
+
+Decision teed up for the cloud phase:
+- Option to adopt as a SOURCE in our registry (managed alternative to hand-built
+  KQL tools), mixable with existing sources — agents unchanged.
+- Prerequisite: Sentinel **data lake** onboarding (verify we have/can enable it).
+- Auth: Security reader role, OAuth.
+- Status: PUBLIC PREVIEW -> fine to trial in commercial; must verify GA + Gov
+  availability + compliance boundary before any Gov deployment.
+- Does NOT replace the platform: it's the data/tool layer only. Our least-
+  privilege scoping, injection defense, grounding, orchestration, and
+  correlation remain the value on top.

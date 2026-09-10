@@ -40,3 +40,13 @@ these are the refinements the shipping UI should incorporate.
 - Evidence-forward, calm, trustworthy — trust is the brand.
 - Enterprise React rebuild on the same authenticated API; components, routing,
   state management, promptbooks.
+
+## Refinements found during agent build
+
+- **Network verdict citations.** The Network/C2 specialist reaches correct
+  verdicts but returns empty key_evidence / 0-0 grounding, because network
+  telemetry rows lack the resolvable identifiers (SystemAlertId etc.) the
+  citation check expects. Network verdicts should be able to cite a connection
+  record or a Defender indicator match as evidence. Refinement, not a bug.
+- **Recommendation verbosity.** Reporting agent occasionally over-elaborates a
+  single recommendation into a long paragraph; tighten via prompt.
