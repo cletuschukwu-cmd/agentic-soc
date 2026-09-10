@@ -41,6 +41,7 @@ from identity_specialist import IdentitySpecialist
 from threatintel_specialist import ThreatIntelSpecialist
 from correlation_specialist import CorrelationSpecialist
 from reporting_specialist import ReportingSpecialist
+from network_specialist import NetworkSpecialist
 
 # The router only classifies intent — a light task. Run it on a cheaper model.
 # Specialists do the heavy reasoning and keep the smarter model. Change freely.
@@ -71,6 +72,7 @@ register(IdentitySpecialist())
 register(ThreatIntelSpecialist())
 register(CorrelationSpecialist())
 register(ReportingSpecialist())
+register(NetworkSpecialist())
 
 
 # --- Model client (router only) --------------------------------------------

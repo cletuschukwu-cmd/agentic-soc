@@ -48,6 +48,12 @@ def consult_triage(query: str) -> dict:
     return _slim(consult("incident_triage", query))
 
 
+def consult_network(query: str) -> dict:
+    """Ask the network specialist whether a host is beaconing or contacting C2."""
+    from orchestrator import consult
+    return _slim(consult("network_investigator", query))
+
+
 def _slim(result: dict) -> dict:
     """Return just what the correlator needs from a consulted specialist: its
     verdict, confidence, reasoning, key evidence, and which agent produced it —
@@ -109,6 +115,7 @@ findings:
 - consult_identity — for whether an account is compromised (sign-in view)
 - consult_threat_intel — for whether indicators are known bad
 - consult_triage — to assess a specific incident by number
+- consult_network — for whether a host is beaconing or contacting C2
 
 Method:
 1. Break the situation into the entities and questions it contains.
@@ -140,6 +147,8 @@ Conclude with a verdict on the SITUATION AS A WHOLE:
              "Consult the threat-intel specialist about whether indicators are known bad.")),
         Tool("consult_triage", consult_triage, _cschema("consult_triage",
              "Consult the triage specialist to assess a specific incident by number.")),
+        Tool("consult_network", consult_network, _cschema("consult_network",
+             "Consult the network specialist about whether a host is beaconing or contacting C2.")),
     ]
 
 
