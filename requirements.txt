@@ -12,3 +12,4 @@
 azure-identity>=1.19.0,<2
 azure-monitor-query>=1.4.0,<2
 openai>=1.55.0,<2
+azure-keyvault-secrets>=4.8.0,<5
