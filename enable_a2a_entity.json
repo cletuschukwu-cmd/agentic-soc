@@ -1,0 +1,18 @@
+{
+  "agent_endpoint": {
+    "protocols": ["responses", "a2a"],
+    "protocol_configuration": { "responses": {}, "a2a": {} }
+  },
+  "agent_card": {
+    "name": "entity-investigator",
+    "description": "Investigates a single indicator — an IP address, file hash, user account, or host — across network, endpoint, identity and threat-intel evidence, and returns a grounded verdict.",
+    "skills": [
+      {
+        "id": "investigate-entity",
+        "name": "Investigate entity",
+        "description": "Investigate an IP, file hash, account, or host and reach a disposition with cited evidence.",
+        "tags": ["security", "soc", "entity", "investigation"]
+      }
+    ]
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "agent_endpoint": {
+    "protocols": ["responses", "a2a"],
+    "protocol_configuration": {
+      "responses": {},
+      "a2a": {}
+    }
+  },
+  "agent_card": {
+    "name": "incident-triage",
+    "description": "Triages a Microsoft Sentinel or Defender incident by its number and returns a disposition (true positive, benign positive, false positive, or insufficient evidence) with cited evidence and a recommended action.",
+    "skills": [
+      {
+        "id": "triage-incident",
+        "name": "Triage incident",
+        "description": "Investigate a security incident by number and reach a defensible disposition.",
+        "tags": ["security", "soc", "triage", "incident"]
+      }
+    ]
+  }
+}

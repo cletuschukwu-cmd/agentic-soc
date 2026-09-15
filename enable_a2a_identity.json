@@ -1,0 +1,18 @@
+{
+  "agent_endpoint": {
+    "protocols": ["responses", "a2a"],
+    "protocol_configuration": { "responses": {}, "a2a": {} }
+  },
+  "agent_card": {
+    "name": "identity-investigator",
+    "description": "Determines whether a user account is compromised, reasoning over sign-in patterns, privilege, risk state, impossible travel, and MFA anomalies.",
+    "skills": [
+      {
+        "id": "investigate-identity",
+        "name": "Investigate identity",
+        "description": "Assess whether an account is compromised and return a disposition with cited evidence.",
+        "tags": ["security", "soc", "identity", "compromise"]
+      }
+    ]
+  }
+}

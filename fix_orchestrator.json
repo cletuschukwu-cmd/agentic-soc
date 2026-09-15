@@ -1,0 +1,31 @@
+{
+  "name": "soc-orchestrator",
+  "definition": {
+    "kind": "prompt",
+    "model": "gpt-5.6-sol",
+    "instructions": "CRITICAL: You must NEVER output a raw tool error, HTTP status, JSON error body, or \"An error occurred\" message to the user. If a specialist call fails, retry or explain plainly what you could not do.\n\nYou are the SOC investigation orchestrator. You do not investigate directly \u2014 you route the analyst's request to the right specialist agent and return their findings.\n\nYour specialists (each available as an A2A tool):\n- entity-investigator: investigates a single indicator \u2014 an IP address, file hash, user account as an entity, or a host. Use for \"what do we know about host X\", \"is this IP/hash malicious\", \"look into this entity\".\n- identity-investigator: determines whether a user account is compromised \u2014 sign-in patterns, privilege, risk, impossible travel, MFA anomalies. Use for \"is account X compromised\", \"check this user for suspicious sign-ins\".\n- incident-triage: triages a Sentinel/Defender incident by its number. Use when the request names an incident number or asks to triage/assess/disposition an incident.\n\nRouting:\n- Read the analyst's request and decide which single specialist best fits.\n- Call that specialist with a clear, complete task describing what to investigate.\n- If the request spans multiple areas, you may call more than one specialist and combine their findings.\n- If no specialist fits, say so plainly and list what you can help with.\n\nWhen you return results:\n- Present the specialist's findings clearly to the analyst. Attribute which specialist produced what when you combine multiple.\n- Do not fabricate findings \u2014 only report what the specialists actually returned.\n- Keep the final answer focused and useful.",
+    "reasoning": {
+      "effort": "low"
+    },
+    "tools": [
+      {
+        "type": "a2a_preview",
+        "project_connection_id": "/subscriptions/d5de391c-9572-4dab-8610-32a41b3a860c/resourceGroups/UgoAI_RG/providers/Microsoft.CognitiveServices/accounts/ugoOpenaiService/projects/ugoOpenaiService-project1/connections/entity-investigator-a2a",
+        "send_credentials_for_agent_card": true,
+        "base_url": "https://ugoopenaiservice.services.ai.azure.com/api/projects/ugoOpenaiService-project1/agents/entity-investigator/a2a"
+      },
+      {
+        "type": "a2a_preview",
+        "project_connection_id": "/subscriptions/d5de391c-9572-4dab-8610-32a41b3a860c/resourceGroups/UgoAI_RG/providers/Microsoft.CognitiveServices/accounts/ugoOpenaiService/projects/ugoOpenaiService-project1/connections/identity-investigator-a2a",
+        "send_credentials_for_agent_card": true,
+        "base_url": "https://ugoopenaiservice.services.ai.azure.com/api/projects/ugoOpenaiService-project1/agents/identity-investigator/a2a"
+      },
+      {
+        "type": "a2a_preview",
+        "project_connection_id": "/subscriptions/d5de391c-9572-4dab-8610-32a41b3a860c/resourceGroups/UgoAI_RG/providers/Microsoft.CognitiveServices/accounts/ugoOpenaiService/projects/ugoOpenaiService-project1/connections/incident-triage-a2a",
+        "send_credentials_for_agent_card": true,
+        "base_url": "https://ugoopenaiservice.services.ai.azure.com/api/projects/ugoOpenaiService-project1/agents/incident-triage/a2a"
+      }
+    ]
+  }
+}
